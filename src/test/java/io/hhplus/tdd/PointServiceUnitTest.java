@@ -6,6 +6,7 @@ import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.point.PointService;
 import io.hhplus.tdd.point.UserPoint;
+import org.apache.catalina.User;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -139,7 +140,22 @@ public class PointServiceUnitTest {
     class PointUsageTests {
         /* 실패 : 현재 잔액보다 큰 금액 사용 시도할 경우, IllegalArgumentException이 발생하며 실패합니다. */
         @Test
-        void shouldThrowException_WhenUsageExceedsCurrentBalance(){}
+        void shouldThrowException_WhenUsageExceedsCurrentBalance(){
+            // given : 아이디가 1L인 사용자가 존재하고, 해당 사용자의 포인트 잔액은 1 점이다.
+            UserPoint userPoint = new UserPoint(USER_ID, 1L, System.currentTimeMillis());
+            long useAmount = 2L;
+
+            Mockito.when(userPointTable.selectById(USER_ID))
+                    .thenReturn(userPoint);
+
+            // when : 2점의 포인트 사용 요청이 발생한다.
+            // then : IllegalArgumentException 이 발생하면 테스트는 성공이다.
+            Assertions.assertThatThrownBy(() -> {
+                pointService.use(USER_ID, useAmount);
+            })
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("잔액 이상의 금액은 사용이 불가합니다.");
+        }
 
         /* 실패 : 사용 요청 포인트 금액이 0보다 작은 경우, IllegalArgumentException이 발생하며 실패합니다. */
         void shouldThrowException_WhenUsageBelowZero(){
