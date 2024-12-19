@@ -29,7 +29,12 @@ public class PointService {
     }
 
     public UserPoint use(long userId, long useAmount){
-        return null;
+        UserPoint userPoint = userPointTable.selectById(userId);
+        UserPoint updatedUserPoint = new UserPoint(userId, userPoint.point() - useAmount, System.currentTimeMillis());
+
+        if(updatedUserPoint.point() < 0){throw new IllegalArgumentException("잔액 이상의 금액은 사용이 불가합니다.");}
+
+        return userPointTable.insertOrUpdate(updatedUserPoint.id(), updatedUserPoint.point());
     }
 
 
