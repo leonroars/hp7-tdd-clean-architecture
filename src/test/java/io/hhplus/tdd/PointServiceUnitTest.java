@@ -6,6 +6,7 @@ import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.point.PointService;
 import io.hhplus.tdd.point.UserPoint;
+import javax.naming.LimitExceededException;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,7 +65,7 @@ public class PointServiceUnitTest {
     @Nested
     class PointChargeTests {
 
-        /* 실패 : 충전 금액과 잔액 합이 최대 충전 금액을 초과할 경우, 충전 실패 후 IllegalArgumentException 이 발생한다. */
+        /* 실패 : 충전 금액과 잔액 합이 최대 충전 금액을 초과할 경우, 충전 실패 후 LimitedExceededException 이 발생한다. */
         @Test
         void shouldThrowException_WhenPointExceedsLimit_AfterCharge(){
             // given : 아이디가 1L인 사용자가 존재하고, 해당 사용자의 보유 포인트는 900_000 점이다.
@@ -80,7 +81,7 @@ public class PointServiceUnitTest {
             Assertions.assertThatThrownBy(() -> {
                 pointService.charge(USER_ID, chargeAmount);
             })
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(LimitExceededException.class)
                     .hasMessageContaining("허용된 포인트 한도를 초과합니다.");
         }
 
@@ -106,16 +107,6 @@ public class PointServiceUnitTest {
             // when : 50,000 점의 충전 요청이 발생한다.
 
             // then : 예외 발생 없이 성공하는지, 충전 후 잔액이 950,000점이 맞는지 검증한다. 문제 없을 경우 성공.
-        }
-
-        /* 성공 : 올바른 충전 요청(0 이상의 충전 금액, 충전 시 허용 잔액 범위 이내)일 경우, 이를 수행하고 PointHistory를 생성하여 저장한다. */
-        @Test
-        void shouldCreateAndSavePointHistory_WhenPointChargeIsValid(){
-            // given : 아이디가 1L인 사용자가 존재하고, 해당 사용자의 포유 포인트는 10이다.
-
-            // when : 10점의 충전 요청이 발생한다. 이 충전 요청은 정책에 부합하는 유효한 요청이다.
-
-            // then : 해당 충전에 대한 PointHistory가 정상적으로 생성 및 저장된다.
         }
     }
 
