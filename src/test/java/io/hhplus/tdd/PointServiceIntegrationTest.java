@@ -2,11 +2,14 @@ package io.hhplus.tdd;
 
 import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
+import io.hhplus.tdd.point.PointHistory;
 import io.hhplus.tdd.point.PointService;
 import io.hhplus.tdd.point.UserPoint;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -33,9 +36,8 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 public class PointServiceIntegrationTest {
     PointService pointService;
-    UserPoint userPoint;
 
-    private static final long initialBalance = 900_000L; // 사용자 최초 보유 잔액. 이를 넉넉하게 잡음으로써 예외 발생 여부 고려하지 않아도 동시성 문제 해결 여부 검증 가능하다.
+    private static final long initialBalance = 600_000L; // 사용자 최초 보유 잔액. 이를 넉넉하게 잡음으로써 예외 발생 여부 고려하지 않아도 동시성 문제 해결 여부 검증 가능하다.
     private static final int numberOfUseRequest = 25; // 사용 요청(스레드) 수
     private static final int numberOfChargeRequest = 25; // 충전 요청(스레드) 수
     private static final long amountPerCharge = 100L; // 충전 단위 금액
@@ -49,8 +51,6 @@ public class PointServiceIntegrationTest {
     @BeforeEach
     public void init(){
         pointService = new PointService(new PointHistoryTable(), new UserPointTable());
-        userPoint = new UserPoint(1L, 0L, System.currentTimeMillis());
-        pointService.charge(userPoint.id(), initialBalance); // 최초 충전 시행.
     }
 
     /**
@@ -59,13 +59,17 @@ public class PointServiceIntegrationTest {
      * 이때 순차적으로 처리되도록 하여 동시성 문제가 발생하지 않도록 한다.
      */
     @Test
-    @DisplayName("동일한 사용자에 대한 동시 다발적 충전 및 사용 요청이 발생")
+    @DisplayName("동일한 사용자에 대한 동시 다발적 충전 및 사용 요청이 발생할 경우 순차적으로 처리한다.")
     void shouldBehaveProperly_WhenConcurrentUseAndChargeOccurs_ForSameUser() throws InterruptedException, ExecutionException {
-        // given : 아이디 1L, 잔액 900_000을 가진 사용자가 존재한다. 해당 사용자에게 각각 25개의 사용 및 충전 요청이 생성된다.
+
+        // given : 아이디 1L, 잔액 600_000을 가진 사용자가 존재한다. 해당 사용자에게 각각 25개의 사용 및 충전 요청이 생성된다.
+        UserPoint userPoint = new UserPoint(1L, 0L, System.currentTimeMillis());
+        pointService.charge(userPoint.id(), initialBalance); // 최초 충전 시행.
+
         ExecutorService executorService = Executors.newFixedThreadPool(numberOfChargeRequest + numberOfUseRequest);
         List<Callable<Void>> shuffledTask = generateShuffledChargeAndUse(userPoint.id(), amountPerCharge, amountPerUse, numberOfChargeRequest, numberOfUseRequest);
 
-        long expectedBalance = 901_250L; // 동시 요청이 모두 순차적으로 올바르게 처리되었을 때의 잔액.
+        long expectedBalance = 601_250L; // 동시 요청이 모두 순차적으로 올바르게 처리되었을 때의 잔액.
 
         // when : ExecutorService의 스레드 풀 내에 생성되어 등록되어있던 스레드들이 주어진 작업 목록을 동시 실행한다.
         List<Future<Void>> futures = executorService.invokeAll(shuffledTask); // 생성해둔 요청 전체 동시 실행 시작.
@@ -80,11 +84,6 @@ public class PointServiceIntegrationTest {
 
         // then 2 : 포인트 충전 및 사용 내역 총 51개(최초 생성 시 1개 포함) 여부 확인.
         Assertions.assertEquals(51, pointService.getAllHistory(userPoint.id()).size());
-
-
-
-
-
     }
 
     /**
@@ -94,8 +93,56 @@ public class PointServiceIntegrationTest {
      */
     @Test
     @DisplayName("복수의 사용자에 대한 동시 다발적 충전 및 사용 요청이 발생")
-    void shouldBehaveProperly_WhenConcurrentUseAndChargeOccurs_ForManyUser(){
+    void shouldBehaveProperly_WhenConcurrentUseAndChargeOccurs_ForManyUser() throws InterruptedException, ExecutionException{
+        // given : 여러 사용자가 존재하며, 각 사용자는 초기 잔액을 가지고 있다. 각 사용자에게 각각의 사용 및 충전 요청이 생성된다.
+        int numberOfUsers = 10;
 
+        // 10명의 사용자를 생성한다. 10명의 사용자 모두 각 25개의 충전/사용 요청이 생성된다.
+        List<UserPoint> users = new ArrayList<>();
+        for (long userId = 1L; userId <= numberOfUsers; userId++) {
+            UserPoint userPoint = new UserPoint(userId, 0L, System.currentTimeMillis());
+            pointService.charge(userId, initialBalance);
+            users.add(userPoint);
+        }
+
+        ExecutorService executorService = Executors.newFixedThreadPool(numberOfUsers * (numberOfChargeRequest + numberOfUseRequest));
+        List<Callable<Void>> tasks = new ArrayList<>();
+
+        // 모든 유저들에 대해 각 50개(25개의 충전, 25개의 사용)의 연산 요청을 생성하여 task에 저장한다.
+        for (UserPoint user : users) {
+            tasks.addAll(generateShuffledChargeAndUse(user.id()
+                    , amountPerCharge
+                    , amountPerUse
+                    , numberOfChargeRequest,
+                    numberOfUseRequest));
+        }
+        // 복수의 사용자 간 요청이 무작위로 수행되도록 섞는다.
+        Collections.shuffle(tasks);
+
+        // 각 사용자의 연산 후 예상 잔액을 계산하여 저장한다.
+        HashMap<Long, Long> expectedBalances = new HashMap<>();
+        for (UserPoint user : users) {
+            long totalCharges = numberOfChargeRequest * amountPerCharge;
+            long totalUses = numberOfUseRequest * amountPerUse;
+            long expectedBalance = initialBalance + totalCharges - totalUses;
+            expectedBalances.put(user.id(), expectedBalance);
+        }
+
+        // when : ExecutorService의 스레드 풀 내에 생성되어 등록되어있던 스레드들이 주어진 작업 목록을 동시 실행한다.
+        List<Future<Void>> futures = executorService.invokeAll(tasks); // 생성해둔 요청 전체 동시 실행 시작.
+        executorService.shutdown(); // 실행된 shuffledTask 내의 Task 부터 순차 종료
+
+        for (Future<Void> future : futures) {
+            future.get(); // invokeAll()에 의해 실행되었던 작업이 종료될때까지 기다렸다가 해당 작업의 결과물을 회수한다.
+        }
+
+        // then 1 : 각 사용자의 포인트 잔액 일치 여부 검증
+        for (UserPoint user : users) {
+            long actualBalance = pointService.getUserPoint(user.id()).point();
+            long expectedBalance = expectedBalances.get(user.id());
+            Assertions.assertEquals(expectedBalance, actualBalance,
+                    "사용자 ID " + user.id() + "의 최종 포인트 잔액이 예상과 일치해야 합니다.");
+        }
     }
 
 

@@ -60,7 +60,7 @@ public class PointService {
 
             UserPoint userPoint = userPointTable.selectById(userId);
             UserPoint updatedUserPoint = new UserPoint(userId, userPoint.point() + chargeAmount, System.currentTimeMillis());
-
+            
             // 정책 : 충전하고자 하는 포인트가 최대 충전 한도인 1,000,000점 이상일 경우 예외를 발생시킨다.
             if(updatedUserPoint.point() > 1_000_000){throw new IllegalArgumentException("허용된 포인트 한도를 초과합니다.");}
 
