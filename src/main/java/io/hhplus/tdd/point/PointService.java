@@ -40,5 +40,9 @@ public class PointService {
         return userPointTable.insertOrUpdate(updatedUserPoint.id(), updatedUserPoint.point());
     }
 
+    public UserPoint getUserPoint(long userId){
+        return userPointTable.selectById(userId);
+    }
+
 
 }

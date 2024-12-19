@@ -229,7 +229,7 @@ public class PointServiceUnitTest {
 
             // when : 해당 회원의 포인트 잔액 조회가 발생한다.
             // then : 잔액이 10L인지 검증한다. 맞을 경우 통과한다.
-            assertEquals(userBalance, pointService.getUserPoint(USER_ID));
+            assertEquals(userBalance, pointService.getUserPoint(USER_ID).point());
         }
     }
 
