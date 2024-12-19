@@ -209,10 +209,28 @@ public class PointServiceUnitTest {
 
     /**
      * <b>3. 포인트 잔액 조회 기능</b>
+     * <br></br>
+     * - 현재 {@link UserPointTable} 설계 상, 주어진 ID를 가진 회원이 존재하지 않을 경우 0점을 가진 해당 회원을 새로 생성하여 저장합니다.
+     * <br></br>
+     * - 따라서 주어진 ID를 가진 회원이 없더라도 예외를 발생시키지 않습니다. 주어진 구조 내에서 정상 작동하기 때문입니다.
      */
     @Nested
     class PointCheckTests {
 
+        /* 성공 테스트 : 이미 존재하는 회원의 포인트 잔액을 반환한다. */
+        @Test
+        void shouldReturnUserPointBalance_WhenUserIdGiven(){
+            // given : ID가 1L인 회원이 존재한다. 해당 회원의 잔액은 10점이다.
+            UserPoint userPoint = new UserPoint(USER_ID, 10L, System.currentTimeMillis());
+            long userBalance = 10L;
+
+            Mockito.when(userPointTable.selectById(USER_ID))
+                    .thenReturn(userPoint);
+
+            // when : 해당 회원의 포인트 잔액 조회가 발생한다.
+            // then : 잔액이 10L인지 검증한다. 맞을 경우 통과한다.
+            assertEquals(userBalance, pointService.getUserPoint(USER_ID));
+        }
     }
 
     /**
