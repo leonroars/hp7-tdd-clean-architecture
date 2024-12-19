@@ -1,6 +1,9 @@
 package io.hhplus.tdd;
 
 import static org.awaitility.Awaitility.given;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 
 import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
@@ -111,10 +114,25 @@ public class PointServiceUnitTest {
         @Test
         void shouldIncreaseUserPoint_WhenPointIsCharged_AndIsBelowLimit(){
             // given : 아이디가 1L인 사용자가 존재하고, 해당 사용자의 보유 포인트는 900,000 점이다.
+            UserPoint userPoint = new UserPoint(USER_ID, 900_000L, System.currentTimeMillis());
+            long chargeAmount = 100_000L;
+            long expectedNewBalance = 1_000_000L;
+            UserPoint updatedUserPoint = new UserPoint(USER_ID, expectedNewBalance, System.currentTimeMillis());
 
-            // when : 50,000 점의 충전 요청이 발생한다.
+            Mockito.when(userPointTable.selectById(USER_ID))
+                    .thenReturn(userPoint);
+            Mockito.when(userPointTable.insertOrUpdate(USER_ID, expectedNewBalance))
+                    .thenReturn(updatedUserPoint);
 
-            // then : 예외 발생 없이 성공하는지, 충전 후 잔액이 950,000점이 맞는지 검증한다. 문제 없을 경우 성공.
+            // when : 100,000 점의 충전 요청이 발생한다.
+            UserPoint result = pointService.charge(USER_ID, chargeAmount);
+
+            // then : 예외 발생 없이 성공하는지, 충전 후 잔액이 1,000,000점이 맞는지 검증한다. 문제 없을 경우 성공.
+            assertEquals(expectedNewBalance, result.point());
+
+            // + Verify : Service 로직 내에서 의존 중인 다른 객체와 호출 메서드에 대한 호출이 정상적으로 이루어지는 지 검증
+            Mockito.verify(userPointTable).selectById(USER_ID);
+            Mockito.verify(userPointTable).insertOrUpdate(USER_ID, expectedNewBalance);
         }
     }
 
