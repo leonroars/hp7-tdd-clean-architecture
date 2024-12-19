@@ -1,9 +1,21 @@
 package io.hhplus.tdd;
 
+import static org.awaitility.Awaitility.given;
+
+import io.hhplus.tdd.database.PointHistoryTable;
+import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.point.PointService;
+import io.hhplus.tdd.point.UserPoint;
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+
 
 /**
  * <b>{@link PointService} 단위 테스트 </b>
@@ -27,7 +39,24 @@ public class PointServiceUnitTest {
     @InjectMocks
     PointService pointService;
 
+    @Mock
+    PointHistoryTable pointHistoryTable;
+
+    @Mock
+    UserPointTable userPointTable;
+
     private static final long USER_ID = 1L;
+
+    /**
+     * 현 테스트 클래스에서 @Mock, @InjeckMocks 로 Annotated 된 필드를 매 테스트 수행 이전 새로 생성하여 주입한다.
+     * <br></br>
+     * 이는 각 테스트들이 다른 테스트 수행 및 결과로부터 독립적으로 수행될 수 있도록 한다.
+     */
+    @BeforeEach
+    void setup() {
+        MockitoAnnotations.openMocks(this);
+    }
+
 
     /**
      * <b>1. 포인트 충전 기능</b>
@@ -39,12 +68,20 @@ public class PointServiceUnitTest {
         @Test
         void shouldThrowException_WhenPointExceedsLimit_AfterCharge(){
             // given : 아이디가 1L인 사용자가 존재하고, 해당 사용자의 보유 포인트는 900_000 점이다.
+            UserPoint userPoint = new UserPoint(USER_ID, 900_000, System.currentTimeMillis());
+            long chargeAmount = 100_001;
 
+            // Mock 객체 행동 정의
+            Mockito.when(userPointTable.selectById(USER_ID))
+                    .thenReturn(userPoint);
 
             // when : 100,001 점의 충전 요청이 발생한다.
             // then : IllegalArgumentException 발생 시 테스트는 성공한다.
-
-
+            Assertions.assertThatThrownBy(() -> {
+                pointService.charge(USER_ID, chargeAmount);
+            })
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("허용된 포인트 한도를 초과합니다.");
         }
 
         /* 실패 : 충전하고자 하는 금액이 0원 미만일 경우 실패한다. */
