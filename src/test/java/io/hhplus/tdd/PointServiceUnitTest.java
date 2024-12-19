@@ -4,9 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
+import io.hhplus.tdd.point.PointHistory;
 import io.hhplus.tdd.point.PointService;
+import io.hhplus.tdd.point.TransactionType;
 import io.hhplus.tdd.point.UserPoint;
 import java.awt.desktop.SystemEventListener;
+import java.util.List;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -247,9 +250,44 @@ public class PointServiceUnitTest {
 
     /**
      * <b>4. 포인트 충전 및 사용 내역 조회 기능</b>
+     * <br></br>
+     *  - 포인트 충전 및 사용 내역 조회는 실패 테스트가 존재하지 않습니다.
+     *  <br></br>
+     *  - 포인트 충전 및 사용 내역은 <u>포인트 충전 및 사용 기능 실행에 따라 발생하는 사후적 로직</u>이기 때문입니다.
+     *  <br></br>
+     *  - 같은 맥락으로, ID 일치 회원이 존재하지 않는 경우 해당 회원은 잔액 0을 갖도록 새로 생성되지만,
+     *    충전 혹은 사용이 발생한 것이 아니기 때문에 PointHistory가 생성되어 저장되지 않습니다.
+     *
      */
     @Nested
     class PointHistoryTests {
 
+        /* 성공 : 포인트 충전 이후 포인트 충전 내역 생성 및 조회 테스트 */
+        @Test
+        void shouldCreateAndRetrunPointHistory_WhenPointChargeOccurs(){
+            // given : 1L 아이디를 가진 회원의 충전 전 잔액은 0원입니다. 30점 충전 발생합니다.
+            UserPoint userPoint = new UserPoint(USER_ID, 0L, System.currentTimeMillis());
+            long chargeAmount  = 30L;
+            UserPoint updatedUserPoint = new UserPoint(USER_ID, 30L, System.currentTimeMillis());
+            PointHistory createdPointHistory = new PointHistory(1L, USER_ID, updatedUserPoint.point(), TransactionType.CHARGE, System.currentTimeMillis());
+            List<PointHistory> histories = List.of(createdPointHistory);
+
+            Mockito.when(userPointTable.selectById(USER_ID))
+                    .thenReturn(userPoint);
+            Mockito.when(userPointTable.insertOrUpdate(USER_ID, chargeAmount))
+                    .thenReturn(updatedUserPoint);
+            Mockito.when(pointHistoryTable.selectAllByUserId(USER_ID))
+                    .thenReturn(List.of(createdPointHistory));
+
+            pointService.charge(USER_ID, chargeAmount);
+
+            // when : 충전 후 해당 회원의 포인트 충전 및 사용 내역 전체 조회.
+            List<PointHistory> result = pointService.getAllHistory();
+
+            // then : 생성되어 반환된 포인트 충전 내역의 userId, amount(해당 유저 포인트 잔액), TransactionType.CHARGE가 모두 일치합니다.
+            Assertions.assertThat(result)
+                    .isEqualTo(histories);
+
+        }
     }
 }
