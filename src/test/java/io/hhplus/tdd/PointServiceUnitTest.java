@@ -84,7 +84,7 @@ public class PointServiceUnitTest {
             Assertions.assertThatThrownBy(() -> {
                 pointService.charge(USER_ID, chargeAmount);
             })
-                    .isInstanceOf(LimitExceededException.class)
+                    .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("허용된 포인트 한도를 초과합니다.");
         }
 
@@ -142,6 +142,7 @@ public class PointServiceUnitTest {
      */
     @Nested
     class PointUsageTests {
+
 
     }
 

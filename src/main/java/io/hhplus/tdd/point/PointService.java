@@ -28,5 +28,9 @@ public class PointService {
         return userPointTable.insertOrUpdate(updatedUserPoint.id(), updatedUserPoint.point());
     }
 
+    public UserPoint use(long userId, long useAmount){
+        return null;
+    }
+
 
 }
