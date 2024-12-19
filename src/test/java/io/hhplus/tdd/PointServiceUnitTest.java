@@ -181,8 +181,28 @@ public class PointServiceUnitTest {
         /* 성공 : 유효한 포인트 사용(0 이상 최대 포인트 한도 미만)의 경우 정상적으로 처리됩니다.
          * - 포인트 사용 후 잔액은 기존의 잔액에서 사용 금액만큼 차감된 금액이어야 합니다.
          */
+        @Test
         void shouldDecreasePointBalance_WhenUsageIsNotNegative_AndIsBelowLimit(){
+            // given : 아이디가 1L인 사용자가 존재하고, 해당 사용자의 포인트 잔액은 10 점이다. 사용 시도 금액은 5점이다.
+            UserPoint userPoint = new UserPoint(USER_ID, 10L, System.currentTimeMillis());
+            long useAmount = 5L;
+            long expectedNewBalance = 5L;
+            UserPoint updatedUserPoint = new UserPoint(USER_ID, expectedNewBalance, System.currentTimeMillis());
 
+            Mockito.when(userPointTable.selectById(USER_ID))
+                    .thenReturn(userPoint);
+            Mockito.when(userPointTable.insertOrUpdate(USER_ID, expectedNewBalance))
+                    .thenReturn(updatedUserPoint);
+
+            // when : 5점의 포인트 사용 요청이 발생한다.
+            UserPoint result = pointService.use(USER_ID, useAmount);
+
+            // then : 예외 발생 없이 성공하는지, 충전 후 잔액이 5점이 맞는지 검증한다. 문제 없을 경우 성공.
+            assertEquals(expectedNewBalance, result.point());
+
+            // + verify : 주입된 UserPointTable 클래스의 메서드 호출이 정상적으로 이루어졌는지 검증한다.
+            Mockito.verify(userPointTable).selectById(USER_ID);
+            Mockito.verify(userPointTable).insertOrUpdate(USER_ID, expectedNewBalance);
         }
 
     }
