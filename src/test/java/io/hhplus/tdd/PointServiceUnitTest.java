@@ -157,8 +157,24 @@ public class PointServiceUnitTest {
                     .hasMessageContaining("잔액 이상의 금액은 사용이 불가합니다.");
         }
 
+        @Test
         /* 실패 : 사용 요청 포인트 금액이 0보다 작은 경우, IllegalArgumentException이 발생하며 실패합니다. */
         void shouldThrowException_WhenUsageBelowZero(){
+
+            // given : 아이디가 1L인 사용자가 존재하고, 해당 사용자의 포인트 잔액은 1 점이다.
+            UserPoint userPoint = new UserPoint(USER_ID, 1L, System.currentTimeMillis());
+            long useAmount = -1L;
+
+            Mockito.when(userPointTable.selectById(USER_ID))
+                    .thenReturn(userPoint);
+
+            // when : -1점의 포인트 사용 요청이 발생한다.
+            // then : IllegalArgumentException 이 발생하면 테스트는 성공이다.
+            Assertions.assertThatThrownBy(() -> {
+                        pointService.use(USER_ID, useAmount);
+                    })
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("0 미만 금액의 사용은 불가합니다.");
 
         }
 

@@ -29,6 +29,9 @@ public class PointService {
     }
 
     public UserPoint use(long userId, long useAmount){
+
+        if(useAmount < 0){throw new IllegalArgumentException("0 미만 금액의 사용은 불가합니다.");}
+
         UserPoint userPoint = userPointTable.selectById(userId);
         UserPoint updatedUserPoint = new UserPoint(userId, userPoint.point() - useAmount, System.currentTimeMillis());
 
