@@ -6,7 +6,7 @@ import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.point.PointService;
 import io.hhplus.tdd.point.UserPoint;
-import org.apache.catalina.User;
+import java.awt.desktop.SystemEventListener;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -230,6 +230,18 @@ public class PointServiceUnitTest {
             // when : 해당 회원의 포인트 잔액 조회가 발생한다.
             // then : 잔액이 10L인지 검증한다. 맞을 경우 통과한다.
             assertEquals(userBalance, pointService.getUserPoint(USER_ID).point());
+        }
+
+        /* 성공 테스트 : 존재하지 않는 회원의 포인트 잔액을 반환한다. 이때 해당 회원은 새로 생성되며, 잔액은 0이어야 한다. */
+        @Test
+        void shouldCreateUserAndReturnZeroBalance_WhenUserDoesntExist(){
+            // given : mocking
+            Mockito.when(userPointTable.selectById(USER_ID))
+                    .thenReturn(new UserPoint(USER_ID, 0, System.currentTimeMillis()));
+
+            // when : 존재하지 않는 회원의 잔액 조회 요청 발생
+            // then : 이때 잔액이 0인 새로운 UserPoint가 생성되어 UserPointTable에 저장된다.
+            assertEquals(0, userPointTable.selectById(USER_ID).point());
         }
     }
 
