@@ -54,6 +54,53 @@ public class PointServiceIntegrationTest {
     }
 
     /**
+     * 시나리오 : 동일한 사용자에 대해 동시에 다수의 충전 및 사용 요청이 발생한다.
+     * <br></br>
+     * 이때 순차적으로 처리되도록 하여 동시성 문제가 발생하지 않도록 한다.
+     */
+    @Test
+    @DisplayName("동일한 사용자에 대한 동시 다발적 충전 및 사용 요청이 발생")
+    void shouldBehaveProperly_WhenConcurrentUseAndChargeOccurs_ForSameUser() throws InterruptedException, ExecutionException {
+        // given : 아이디 1L, 잔액 900_000을 가진 사용자가 존재한다. 해당 사용자에게 각각 25개의 사용 및 충전 요청이 생성된다.
+        ExecutorService executorService = Executors.newFixedThreadPool(numberOfChargeRequest + numberOfUseRequest);
+        List<Callable<Void>> shuffledTask = generateShuffledChargeAndUse(userPoint.id(), amountPerCharge, amountPerUse, numberOfChargeRequest, numberOfUseRequest);
+
+        long expectedBalance = 901_250L; // 동시 요청이 모두 순차적으로 올바르게 처리되었을 때의 잔액.
+
+        // when : ExecutorService의 스레드 풀 내에 생성되어 등록되어있던 스레드들이 주어진 작업 목록을 동시 실행한다.
+        List<Future<Void>> futures = executorService.invokeAll(shuffledTask); // 생성해둔 요청 전체 동시 실행 시작.
+        executorService.shutdown(); // 실행된 shuffledTask 내의 Task 부터 순차 종료
+
+        for(Future<Void> future : futures){
+            future.get(); // invokeAll()에 의해 실행되었던 작업이 종료될때까지 기다렸다가 해당 작업의 결과물을 회수한다.
+        }
+
+        // then 1 : 포인트 잔액 일치 여부 검증 : 동시성 리팩터 이전 불일치(expected : 901250 / actual : 900200)
+        Assertions.assertEquals(expectedBalance, pointService.getUserPoint(userPoint.id()).point());
+
+        // then 2 : 포인트 충전 및 사용 내역 총 51개(최초 생성 시 1개 포함) 여부 확인.
+        Assertions.assertEquals(51, pointService.getAllHistory(userPoint.id()).size());
+
+
+
+
+
+    }
+
+    /**
+     * 시나리오 : 다수의 사용자에 대한 동시 다발적 충전 및 사용 요청이 발생한다.
+     * <br></br>
+     * 이때 순차적으로 처리되도록 하여 동시성 문제가 발생하지 않도록 한다.
+     */
+    @Test
+    @DisplayName("복수의 사용자에 대한 동시 다발적 충전 및 사용 요청이 발생")
+    void shouldBehaveProperly_WhenConcurrentUseAndChargeOccurs_ForManyUser(){
+
+    }
+
+
+
+    /**
      * 충전 요청을 흉내내기 위해, 충전 기능 호출을 ExeutorService에 등록 및 실행 가능한 작업(Task) 형태로 가공한다.
      * <br></br>
      * 생성된 25개의 충전 요청이 이후 ExecutorService.invokeAll()에 의해 동시에 실행된다.
@@ -87,8 +134,8 @@ public class PointServiceIntegrationTest {
      * @return
      */
     private List<Callable<Void>> generateUseTask(long userId,
-                                                    long amountPerUse,
-                                                    int numberOfUseRequest){
+                                                 long amountPerUse,
+                                                 int numberOfUseRequest){
         List<Callable<Void>> taskList = new ArrayList<>();
         for(int i = 0; i < numberOfUseRequest; i++){
             taskList.add(() -> {
@@ -114,51 +161,6 @@ public class PointServiceIntegrationTest {
         return jobs;
     }
 
-
-    /**
-     * 시나리오 : 동일한 사용자에 대해 동시에 다수의 충전 및 사용 요청이 발생한다.
-     * <br></br>
-     * 이때 순차적으로 처리되도록 하여 동시성 문제가 발생하지 않도록 한다.
-     */
-    @Test
-    @DisplayName("동일한 사용자에 대한 동시 다발적 충전 및 사용 요청이 발생")
-    void shouldBehaveProperly_WhenConcurrentUseAndChargeOccurs_ForSameUser() throws InterruptedException, ExecutionException {
-        // given : 아이디 1L, 잔액 900_000을 가진 사용자가 존재한다. 해당 사용자에게 각각 25개의 사용 및 충전 요청이 생성된다.
-        ExecutorService executorService = Executors.newFixedThreadPool(numberOfChargeRequest + numberOfUseRequest);
-        List<Callable<Void>> shuffledTask = generateShuffledChargeAndUse(userPoint.id(), amountPerCharge, amountPerUse, numberOfChargeRequest, numberOfUseRequest);
-
-        long expectedBalance = 901_250L; // 동시 요청이 모두 순차적으로 올바르게 처리되었을 때의 잔액.
-
-        // when : ExecutorService의 스레드 풀 내에 생성되어 등록되어있던 스레드들이 주어진 작업 목록을 동시 실행한다.
-        List<Future<Void>> futures = executorService.invokeAll(shuffledTask); // 생성해둔 요청 전체 동시 실행 시작.
-        executorService.shutdown(); // 실행된 shuffledTask 내의 Task 부터 순차 종료
-
-        for(Future<Void> future : futures){
-            future.get(); // invokeAll()에 의해 실행되었던 작업이 종료될때까지 기다렸다가 해당 작업의 결과물을 회수한다.
-        }
-
-        // then 1 : 포인트 잔액 일치 여부 검증
-        Assertions.assertEquals(expectedBalance, pointService.getUserPoint(userPoint.id()).point());
-
-        // then 2 : 포인트 충전 및 사용 내역 총 51개(최초 생성 시 1개 포함) 여부 확인.
-        Assertions.assertEquals(51, pointService.getAllHistory(userPoint.id()).size());
-
-
-
-
-
-    }
-
-    /**
-     * 시나리오 : 다수의 사용자에 대한 동시 다발적 충전 및 사용 요청이 발생한다.
-     * <br></br>
-     * 이때 순차적으로 처리되도록 하여 동시성 문제가 발생하지 않도록 한다.
-     */
-    @Test
-    @DisplayName("복수의 사용자에 대한 동시 다발적 충전 및 사용 요청이 발생")
-    void shouldBehaveProperly_WhenConcurrentUseAndChargeOccurs_ForManyUser(){
-
-    }
 
 
 }
