@@ -282,12 +282,11 @@ public class PointServiceUnitTest {
             pointService.charge(USER_ID, chargeAmount);
 
             // when : 충전 후 해당 회원의 포인트 충전 및 사용 내역 전체 조회.
-            List<PointHistory> result = pointService.getAllHistory();
+            List<PointHistory> result = pointService.getAllHistory(USER_ID);
 
             // then : 생성되어 반환된 포인트 충전 내역의 userId, amount(해당 유저 포인트 잔액), TransactionType.CHARGE가 모두 일치합니다.
             Assertions.assertThat(result)
                     .isEqualTo(histories);
-
         }
     }
 }
