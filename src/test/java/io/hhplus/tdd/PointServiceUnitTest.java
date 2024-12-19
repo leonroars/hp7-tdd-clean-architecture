@@ -1,17 +1,12 @@
 package io.hhplus.tdd;
 
-import static org.awaitility.Awaitility.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
 
 import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.point.PointService;
 import io.hhplus.tdd.point.UserPoint;
-import javax.naming.LimitExceededException;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -142,7 +137,21 @@ public class PointServiceUnitTest {
      */
     @Nested
     class PointUsageTests {
+        /* 실패 : 현재 잔액보다 큰 금액 사용 시도할 경우, IllegalArgumentException이 발생하며 실패합니다. */
+        @Test
+        void shouldThrowException_WhenUsageExceedsCurrentBalance(){}
 
+        /* 실패 : 사용 요청 포인트 금액이 0보다 작은 경우, IllegalArgumentException이 발생하며 실패합니다. */
+        void shouldThrowException_WhenUsageBelowZero(){
+
+        }
+
+        /* 성공 : 유효한 포인트 사용(0 이상 최대 포인트 한도 미만)의 경우 정상적으로 처리됩니다.
+         * - 포인트 사용 후 잔액은 기존의 잔액에서 사용 금액만큼 차감된 금액이어야 합니다.
+         */
+        void shouldDecreasePointBalance_WhenUsageIsNotNegative_AndIsBelowLimit(){
+
+        }
 
     }
 
