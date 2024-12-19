@@ -17,7 +17,7 @@ public class PointService {
 
         // 정책 : 충전하고자 하는 포인트가 0보다 작은 경우 예외를 발생시킨다.
         if(chargeAmount < 0){
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("0보다 작은 금액의 포인트 충전은 불가합니다.");
         }
 
         UserPoint userPoint = userPointTable.selectById(userId);

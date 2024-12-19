@@ -89,11 +89,19 @@ public class PointServiceUnitTest {
         @Test
         void shouldThrowException_IfChargeAmountBelowZero(){
             // given : 아이디가 1L인 사용자가 존재한다. 해당 사용자의 보유 포인트는 현재 10이다.
+            UserPoint userPoint = new UserPoint(USER_ID, 10, System.currentTimeMillis());
+            long chargeAmount = -1L;
+
+            Mockito.when(userPointTable.selectById(USER_ID))
+                    .thenReturn(userPoint);
 
             // when : -1L 점의 충전 요청이 발생한다.
-
             // then : IllegalArgumentException 발생 시 테스트는 성공한다.
-
+            Assertions.assertThatThrownBy(() -> {
+                pointService.charge(USER_ID, chargeAmount);
+            })
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("0보다 작은 금액의 포인트 충전은 불가합니다.");
         }
 
          /*
